@@ -10,7 +10,6 @@ backtrader==1.9.76.123
 binance-api==0.1.2
 bokeh==2.4.3
 Brotli==1.0.9
-bta-lib==
 certifi==2021.5.30
 chardet==3.0.4
 charset-normalizer==2.0.12
