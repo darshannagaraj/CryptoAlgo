@@ -337,7 +337,8 @@ def find_sell_signals(candlestick_data):
              is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
             if(idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2):
                 return "yes"
-                sell_signals.append(candle)
+
+            sell_signals.append(candle)
     return sell_signals
 
 
