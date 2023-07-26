@@ -179,10 +179,7 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
         print(shooting_star)
         print("\n")
     print("Buy signals:")
-    sl = calculate_stop_lossForSell(df.iloc[-1:])
-    insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
-                        VWAP['higher_band'].iloc[-1], sl[0], VWAP['vwap'].iloc[-1])
-    PlaceOrder("SELL", df.iloc[-1:], sl[0], s)
+
 
     print ("I am here")
     if (sell_signals == "yes"):
