@@ -1,4 +1,5 @@
 import datetime
+import math
 import os
 import pandas as pd
 import numpy as np
@@ -178,10 +179,7 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
         print(f"Pattern {idx + 1}:")
         print(shooting_star)
         print("\n")
-    print("Buy signals:")
 
-
-    print ("I am here")
     if (sell_signals == "yes"):
         sl = calculate_stop_lossForSell(df.iloc[-1:])
         insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
@@ -239,7 +237,8 @@ def PlaceOrder(type, candle, sl,obj):
 
     if float(pos['positionAmt']) == 0:
         qty = (Entry_usdt / candle['Close'])
-        qty = (round(float((qty)), int( obj['quantityPrecision'])))
+        qty = math.floor(qty * (10 ** obj['quantityPrecision'])) / (10 ** obj['quantityPrecision'])
+
         order = Wrapper_obj.create_market_order(obj['symbol'], type, qty, client)
         sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], type, pos['positionAmt'], sl, client)
         print("order -", order, "sl order " , sl_order)
