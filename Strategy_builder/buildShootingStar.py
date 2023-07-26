@@ -2,6 +2,16 @@ import datetime
 import os
 import pandas as pd
 import numpy as np
+import sys
+current_directory = os.path.abspath(__file__)
+two_levels_before = os.path.dirname(os.path.dirname(current_directory))
+three = os.path.dirname(os.path.dirname(os.path.dirname(current_directory)))
+sys.path.append(three)
+sys.path.append(two_levels_before)
+sys.path.append(two_levels_before+'\\Data_loader\\')
+sys.path.append(two_levels_before+'\\lib\\')
+sys.path.append(two_levels_before+'\\OrderManagement\\')
+
 from binance.client import Client
 from Data_loader.Binance_api import Binance_Api_wrapper_generic
 from Data_loader.Binance_api_helper import Binance_api_helper
