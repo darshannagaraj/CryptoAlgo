@@ -301,7 +301,7 @@ def find_buy_signals(candlestick_data):
                 is_inside_bollinger_upper(candle, candle['BollingerUpper'],candle['BollingerLower']) and \
                 is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
                 # candle['oi_change_last2_pc'] > 2:
-            if idx == len(candlestick_data) - 1:
+            if idx == len(candlestick_data) - 1 or  idx == len(candlestick_data) - 2:
                 return "yes"
             buy_signals.append(candle)
 
@@ -326,7 +326,7 @@ def find_sell_signals(candlestick_data):
                 is_volume_greater_than_average(candle, candlestick_data) and \
                 is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
                 is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-            if idx == len(candlestick_data) - 1:
+            if idx == len(candlestick_data) - 1 or  idx == len(candlestick_data) - 2:
                 return "yes"
 
             sell_signals.append(candle)
@@ -335,9 +335,9 @@ def find_sell_signals(candlestick_data):
              is_volume_greater_than_average(candle, candlestick_data) and \
              is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
              is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-             if idx == len(candlestick_data) - 1 :
+            if(idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2):
                 return "yes"
-             sell_signals.append(candle)
+                sell_signals.append(candle)
     return sell_signals
 
 
