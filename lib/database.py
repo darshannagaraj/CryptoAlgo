@@ -33,13 +33,15 @@ def connect_db():
 
 # Function to insert scanned data into the database
 def insert_scanned_data( date, script,  signal, reason, script_category, expected_target, expected_sl, good_price):
-    conn = connect_db()
-    with conn.cursor() as cur:
-        cur.execute('INSERT INTO scanned_data (date,symbol, signal, reason, script_category, expected_target, expected_sl, good_price) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
-                    (date, script, signal, reason, script_category, expected_target, expected_sl, good_price))
+    try:
+        conn = connect_db()
+        with conn.cursor() as cur:
+            cur.execute('INSERT INTO scanned_data (date,symbol, signal, reason, script_category, expected_target, expected_sl, good_price) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
+                        (date, script, signal, reason, script_category, expected_target, expected_sl, good_price))
 
-    conn.commit()
-
+        conn.commit()
+    except:
+        print("DB not initilaised")
 # def fetch_option_data(symbol, date1):
 #     with connect_db().cursor() as cur:
 #         cur.execute(
