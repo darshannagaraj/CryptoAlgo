@@ -235,7 +235,7 @@ def PlaceOrder(type, candle, sl,obj):
     client = Wrapper_obj.get_client()
     pos_info = client.futures_position_information()
     pos = get_postion_details(obj['symbol'], pos_info)
-    Entry_usdt = 30
+    Entry_usdt = 150
 
     if float(pos['positionAmt']) == 0:
         qty = (Entry_usdt / candle['Close'])
