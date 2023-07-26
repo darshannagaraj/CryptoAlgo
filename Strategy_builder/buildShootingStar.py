@@ -180,6 +180,8 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
         print("\n")
     print("Buy signals:")
 
+
+    print ("I am here")
     if (sell_signals == "yes"):
         sl = calculate_stop_lossForSell(df.iloc[-1:])
         insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
