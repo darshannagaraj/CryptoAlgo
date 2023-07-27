@@ -7,7 +7,7 @@ import sys
 import logging
 
 logging.basicConfig(
-    level=logging.DEBUG,  # Set the logging level (e.g., DEBUG, INFO, WARNING, ERROR)
+    level=logging.ERROR,  # Set the logging level (e.g., DEBUG, INFO, WARNING, ERROR)
     format='%(asctime)s - %(levelname)s - %(message)s',
     filename='app.log',   # Set the name of the log file
     filemode='a'          # Set the file mode (w: write, a: append)
@@ -196,7 +196,7 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
                             VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
         PlaceOrder("SELL", df.iloc[-1:], sl[0], s)
 
-    if (buy_signals == "yes"):
+    if (buy_signals == "yes" or s['symbol'] == "ASTRUSDT"):
         sl = calculate_stop_lossForBuy(df.iloc[-1:])
         insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
                             VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
@@ -255,7 +255,7 @@ def PlaceOrder(type, candle, sl,obj):
         order = Wrapper_obj.create_market_order(obj['symbol'], type, qty, client)
         logging.info('order ' + order)
         sltype = "SELL" if type == "BUY" else "BUY"
-        sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], type, pos['positionAmt'], sl, client)
+        sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, pos['positionAmt'], sl, client)
         logging.info('sl order ' + sl_order)
         print("order -", order, "sl order " , sl_order)
 
