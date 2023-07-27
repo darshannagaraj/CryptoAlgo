@@ -130,7 +130,7 @@ def count_decimal_places(num):
 
 def calculate_stop_lossForSell(candle):
     slprice =  candle['Close'] * 0.98
-    closing_prices = candle['Close']
+    closing_prices = candle['Close'] + (candle['Close'] * 0.993)
     decimal_count = [count_decimal_places(price) for price in closing_prices]
     sl_price = round(float(slprice), decimal_count[0])
     sl = np.minimum(candle['High'], sl_price)  # 2% below the close price
@@ -196,8 +196,8 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
                             VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
         PlaceOrder("SELL", df.iloc[-1:], sl[0], s)
 
-    if (buy_signals == "yes" or s['symbol'] == "ASTRUSDT"):
-        sl = calculate_stop_lossForBuy(df.iloc[-1:])
+    if (buy_signals == "yes"):
+        sl = calculate_stop_lossForSell(df.iloc[-1:])
         insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
                             VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
         PlaceOrder("BUY", df.iloc[-1:], sl[0], s)
@@ -251,12 +251,14 @@ def PlaceOrder(type, candle, sl,obj):
         logging.info('placing order posiiton is 0')
         qty = (Entry_usdt / candle['Close'])
         qty = math.floor(qty * (10 ** obj['quantityPrecision'])) / (10 ** obj['quantityPrecision'])
-        logging.info('QTY' + qty)
+
         order = Wrapper_obj.create_market_order(obj['symbol'], type, qty, client)
-        logging.info('order ' + order)
+
         sltype = "SELL" if type == "BUY" else "BUY"
-        sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, pos['positionAmt'], sl, client)
-        logging.info('sl order ' + sl_order)
+        xrp_positions = [pos for pos in client.futures_account()['positions'] if pos['symbol'] == obj['symbol']][0]
+
+        sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, xrp_positions['positionAmt'], sl, client)
+
         print("order -", order, "sl order " , sl_order)
 
 def is_candle_green(candle):
