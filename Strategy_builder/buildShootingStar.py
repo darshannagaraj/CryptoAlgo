@@ -4,6 +4,16 @@ import os
 import pandas as pd
 import numpy as np
 import sys
+import logging
+
+logging.basicConfig(
+    level=logging.DEBUG,  # Set the logging level (e.g., DEBUG, INFO, WARNING, ERROR)
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename='app.log',   # Set the name of the log file
+    filemode='a'          # Set the file mode (w: write, a: append)
+)
+
+
 current_directory = os.path.abspath(__file__)
 two_levels_before = os.path.dirname(os.path.dirname(current_directory))
 three = os.path.dirname(os.path.dirname(os.path.dirname(current_directory)))
@@ -229,6 +239,7 @@ def get_postion_details(script_code, pos_info):
     return None
 
 def PlaceOrder(type, candle, sl,obj):
+    logging.info('placing order')
     Wrapper_obj = Binance_Api_wrapper_generic()
     client = Wrapper_obj.get_client()
     pos_info = client.futures_position_information()
@@ -237,12 +248,15 @@ def PlaceOrder(type, candle, sl,obj):
 
     if float(pos['positionAmt']) == 0:
         print("here placing order")
+        logging.info('placing order posiiton is 0')
         qty = (Entry_usdt / candle['Close'])
         qty = math.floor(qty * (10 ** obj['quantityPrecision'])) / (10 ** obj['quantityPrecision'])
-
+        logging.info('QTY' + qty)
         order = Wrapper_obj.create_market_order(obj['symbol'], type, qty, client)
+        logging.info('order ' + order)
         sltype = "SELL" if type == "BUY" else "BUY"
         sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], type, pos['positionAmt'], sl, client)
+        logging.info('sl order ' + sl_order)
         print("order -", order, "sl order " , sl_order)
 
 def is_candle_green(candle):
