@@ -236,10 +236,12 @@ def PlaceOrder(type, candle, sl,obj):
     Entry_usdt = 150
 
     if float(pos['positionAmt']) == 0:
+        print("here placing order")
         qty = (Entry_usdt / candle['Close'])
         qty = math.floor(qty * (10 ** obj['quantityPrecision'])) / (10 ** obj['quantityPrecision'])
 
         order = Wrapper_obj.create_market_order(obj['symbol'], type, qty, client)
+        sltype = "SELL" if type == "BUY" else "BUY"
         sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], type, pos['positionAmt'], sl, client)
         print("order -", order, "sl order " , sl_order)
 
