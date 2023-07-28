@@ -36,7 +36,7 @@ class Binance_Api_wrapper_generic():
         return ab
 
     def create_stop_loss_market_order(self, symbol, side, qty, stop_loss_price , client):
-       ab = client.futures_create_order(symbol=symbol, side=side, type='STOP_MARKET', quantity=qty,
+       ab = client.futures_create_order(symbol=symbol, side=side, type='FUTURE_ORDER_TYPE_STOP_MARKET', quantity=qty,
                                     workingType='MARK_PRICE', stopPrice=stop_loss_price, reduceOnly=True)
        return ab
 
