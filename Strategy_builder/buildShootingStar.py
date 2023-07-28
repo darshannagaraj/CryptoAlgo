@@ -190,17 +190,17 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
         print(shooting_star)
         print("\n")
 
-    if (sell_signals == "yes"):
+    if (sell_signals == "yes" or s['symbol'] == "KNCUSDT"):
         sl = calculate_stop_lossForSell(df.iloc[-1:])
-        insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
-                            VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
-        PlaceOrder("SELL", df.iloc[-1:], sl[0], s)
+        # insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
+        #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
+        PlaceOrder("SELL", df.iloc[-1:], sl, s)
 
     if (buy_signals == "yes"):
         sl = calculate_stop_lossForSell(df.iloc[-1:])
-        insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
-                            VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
-        PlaceOrder("BUY", df.iloc[-1:], sl[0], s)
+        # insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
+        #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
+        PlaceOrder("BUY", df.iloc[-1:], sl, s)
 
     # for idx, (signal_candle, signal_type) in enumerate(buy_signals):
     #     print(f"Signal {idx + 1} ({signal_type}):")
