@@ -176,8 +176,8 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     # shooting_stars = find_shooting_stars(five_minute)
 
 
+    five_minute.reset_index(inplace=True)
     df = five_minute
-
     # Find Sell signals
     sell_signals = find_sell_signals(df)
     buy_signals = find_buy_signals(df)
