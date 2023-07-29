@@ -163,9 +163,9 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     five_minute = getminutedata(s['symbol'],client.KLINE_INTERVAL_5MINUTE,1, market_type,client)
     five_minute.drop(five_minute.tail(drop_rows).index,
             inplace=True)
-    hist_data = client.futures_open_interest_hist(symbol=s['symbol'], period=client.KLINE_INTERVAL_5MINUTE,
-
-    limit=25)
+    # hist_data = client.futures_open_interest_hist(symbol=s['symbol'], period=client.KLINE_INTERVAL_5MINUTE,
+    #
+    # limit=25)
     # print("Shooting star patterns:")
     # oi_df= Binance_api_helper.convert_hash_to_data_frame(hist_data)
     # Binance_api_helper.oi_change(oi_df)
@@ -194,13 +194,19 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
 
     if (sell_signals == "yes"):
         sl = calculate_stop_lossForSell(df.iloc[-1:])
+        sl1 = calculate_stop_lossForSell(df.iloc[-2:])
+        sl2 = calculate_stop_lossForSell(df.iloc[-2:])
+        sl = np.maximum(np.maximum(sl,sl1) ,sl2) # 2% below the close price
         # insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
         #
         #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
         PlaceOrder("SELL", df.iloc[-1:], sl, s)
 
     if (buy_signals == "yes"):
-        sl = calculate_stop_lossForSell(df.iloc[-1:])
+        sl = calculate_stop_lossForBuy(df.iloc[-1:])
+        sl1 = calculate_stop_lossForSell(df.iloc[-2:])
+        sl2 = calculate_stop_lossForSell(df.iloc[-2:])
+        sl = np.minimum(np.minimum(sl,sl1) ,sl2)
         # insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
         #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
         PlaceOrder("BUY", df.iloc[-1:], sl, s)
