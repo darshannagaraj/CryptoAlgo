@@ -129,19 +129,19 @@ def count_decimal_places(num):
 
 
 def calculate_stop_lossForSell(candle):
-    slprice =  candle['Close'] * 0.98
-    closing_prices = candle['Close'] + (candle['Close'] * 0.993)
-    decimal_count = [count_decimal_places(price) for price in closing_prices]
-    sl_price = round(float(slprice), decimal_count[0])
-    sl = np.minimum(candle['High'], sl_price)  # 2% below the close price
+    slprice = candle['Close'].iloc[0] * 0.98
+    closing_prices = candle['Close'].iloc[0] + (candle['Close'].iloc[0] * 0.993)
+    decimal_count = count_decimal_places(slprice)
+    sl_price = round(float(slprice), decimal_count)
+    sl = np.maximum(candle['High'].iloc[0], sl_price)  # 2% below the close price
     return sl
 
 def calculate_stop_lossForBuy(candle):
-    slprice = candle['Close'] * 1.02
-    closing_prices = candle['Close']
-    decimal_count = [count_decimal_places(price) for price in closing_prices]
-    sl_price = round(float(slprice), decimal_count[0])
-    sl = np.minimum(candle['Low'], sl_price)  # 2% below the close price
+    slprice = candle['Close'].iloc[0] * 1.02
+    closing_prices = candle['Close'].iloc[0]
+    decimal_count = count_decimal_places(slprice)
+    sl_price = round(float(slprice), decimal_count)
+    sl = np.minimum(candle['Low'].iloc[0], sl_price)  # 2% below the close price
     return sl
 
 
@@ -156,6 +156,7 @@ def find_symbols_close_to_vwap(df, threshold_lower=0.8, threshold_higher=1.2):
     higher_band = df['higher_band'].iloc[-1]
     return lower_band <= price <= higher_band
 def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_obj,drop_rows=0 ):
+
     atr_period = 10
     atr_multiplier = 3.0
     scanned_data = {}
@@ -190,9 +191,10 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
         print(shooting_star)
         print("\n")
 
-    if (sell_signals == "yes"):
+    if (sell_signals == "yes" or s['symbol'] == "BTCUSDT"):
         sl = calculate_stop_lossForSell(df.iloc[-1:])
         # insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
+        #
         #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
         PlaceOrder("SELL", df.iloc[-1:], sl, s)
 
@@ -218,15 +220,15 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     #     insert_scanned_data(datetime.now(), s['symbol'], "SELL", "SELL Signal", "CRYPTO",
     #                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
 
-    current_cl_index = len(five_minute.Close) - 1
-    if five_minute['oi_change_last2_pc'].values[current_cl_index] > 2  :
-        insert_scanned_data(datetime.datetime.now(), s['symbol'], "TBD", "OI Change "+ five_minute['oi_change_last2_pc'].values[current_cl_index], "CRYPTO",
-                            VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
-
-    for idx, shooting_star in enumerate(sell_signals):
-        print(f"Pattern {idx + 1}:")
-        print(shooting_star)
-        print("\n")
+    # current_cl_index = len(five_minute.Close) - 1
+    # if five_minute['oi_change_last2_pc'].values[current_cl_index] > 2  :
+    #     insert_scanned_data(datetime.datetime.now(), s['symbol'], "TBD", "OI Change "+ five_minute['oi_change_last2_pc'].values[current_cl_index], "CRYPTO",
+    #                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
+    #
+    # for idx, shooting_star in enumerate(sell_signals):
+    #     print(f"Pattern {idx + 1}:")
+    #     print(shooting_star)
+    #     print("\n")
 
 def is_candle_red(candle,candlestick_data):
     average_candle_size = candlestick_data['High'].mean() - candlestick_data['Low'].mean()
@@ -257,9 +259,16 @@ def PlaceOrder(type, candle, sl,obj):
         sltype = "SELL" if type == "BUY" else "BUY"
         xrp_positions = [pos for pos in client.futures_account()['positions'] if pos['symbol'] == obj['symbol']][0]
 
-        sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, xrp_positions['positionAmt'], sl, client)
-
+        sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, abs(float(xrp_positions['positionAmt'])), sl, client)
         print("order -", order, "sl order " , sl_order)
+    #
+    # elif(float(pos['positionAmt']) <= 0):
+    #     sltype = "SELL" if type == "BUY" else "BUY"
+    #     xrp_positions = [pos for pos in client.futures_account()['positions'] if pos['symbol'] == obj['symbol']][0]
+    #
+    #     sl_order = Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, xrp_positions['positionAmt'], sl,
+    #                                                          client)
+
 
 def is_candle_green(candle):
     return candle['Close'] > candle['Open']
@@ -378,21 +387,16 @@ def Scanner():
             for s in symbol_list['symbols']:
                 try:
                     Future_scan =  find_movement_based_on_time_frame(s, client, "future", Scanned_all,Wrapper_obj)
-                    if Future_scan != None:
-                            db_string = Future_scan.split("||")[1].split("|")
-                            postges_push_trade(s['symbol'], db_string[1], db_string[2],
-                                               db_string[3], db_string[4], db_string[5], db_string[6], db_string[7], db_string[8],
-                                           db_string[9], "OPEN_INREST")
-
-
                 except Exception as ex1:
                     print('Error creating batch: %s' % str(ex1))
-
+                    import traceback
+                    traceback.print_exc()
             print(" #{starttime} ended scanning ")
             print(starttime)
             time.sleep(300.0 - ((time.time() - starttime) % 60.0))
         except Exception as ex1:
             print('Error creating batch: %s' % str(ex1))
             time.sleep(100)
+
 
 Scanner()

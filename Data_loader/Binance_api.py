@@ -3,7 +3,7 @@ import os
 import pandas as pd
 from binance.client import Client
 import btalib
-from binance.enums import FUTURE_ORDER_TYPE_TAKE_PROFIT_MARKET
+from binance.enums import FUTURE_ORDER_TYPE_TAKE_PROFIT_MARKET, FUTURE_ORDER_TYPE_STOP_MARKET
 import config as cfg
 from binance.enums import HistoricalKlinesType
 
@@ -35,10 +35,10 @@ class Binance_Api_wrapper_generic():
                                          workingType='MARK_PRICE', stopPrice=stop_loss_price, reduceOnly=True)
         return ab
 
-    def create_stop_loss_market_order(self, symbol, side, qty, stop_loss_price , client):
-       ab = client.futures_create_order(symbol=symbol, side=side, type='TAKE_PROFIT_MARKET', quantity=qty,
-                                    workingType='MARK_PRICE', stopPrice=stop_loss_price, reduceOnly=True)
-       return ab
+    def create_stop_loss_market_order(self, symbol, side, qty, stop_loss_price, client):
+        ab = client.futures_create_order(symbol=symbol, side=side, type='STOP_MARKET', quantity=qty,
+                                         workingType='MARK_PRICE', stopPrice=stop_loss_price, reduceOnly=True)
+        return ab
 
     # get timestamp of earliest date data is available
 
