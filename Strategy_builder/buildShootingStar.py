@@ -160,7 +160,6 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     atr_period = 10
     atr_multiplier = 3.0
     scanned_data = {}
-    print(s['symbol'])
     five_minute = getminutedata(s['symbol'],client.KLINE_INTERVAL_5MINUTE,1, market_type,client)
     five_minute.drop(five_minute.tail(drop_rows).index,
             inplace=True)
@@ -168,13 +167,13 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
 
     limit=25)
     # print("Shooting star patterns:")
-    oi_df= Binance_api_helper.convert_hash_to_data_frame(hist_data)
-    Binance_api_helper.oi_change(oi_df)
-    Binance_api_helper.oi_change_candles(oi_df, 1)
-    Binance_api_helper.oi_change_candles(oi_df, 2)
-    # five_minute['oi_change_last2'] = oi_df['oi_change_last2']
-    five_minute['oi_change_last2_pc'] = oi_df['oi_change_last2_pc']
-    # shooting_stars = find_shooting_stars(five_minute)
+    # oi_df= Binance_api_helper.convert_hash_to_data_frame(hist_data)
+    # Binance_api_helper.oi_change(oi_df)
+    # Binance_api_helper.oi_change_candles(oi_df, 1)
+    # Binance_api_helper.oi_change_candles(oi_df, 2)
+    # # five_minute['oi_change_last2'] = oi_df['oi_change_last2']
+    # five_minute['oi_change_last2_pc'] = oi_df['oi_change_last2_pc']
+    # # shooting_stars = find_shooting_stars(five_minute)
 
 
     five_minute.reset_index(inplace=True)
@@ -187,6 +186,8 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     VWAP = calculate_vwap_bands(five_minute, num_std_dev=1)
 
     for idx, shooting_star in enumerate(sell_signals):
+        current_datetime = datetime.datetime.now()
+        print(current_datetime, s['symbol'])
         print(f"Pattern {idx + 1}:")
         print(shooting_star)
         print("\n")
@@ -352,7 +353,8 @@ def find_sell_signals(candlestick_data):
                 is_volume_greater_than_average(candle, candlestick_data) and \
                 is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
                 is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-            if idx == len(candlestick_data) - 1 or  idx == len(candlestick_data) - 2:
+            print(idx, "----", len(candlestick_data))
+            if idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2 or idx == len(candlestick_data) - 3:
                 return "yes"
 
             sell_signals.append(candle)
@@ -361,7 +363,8 @@ def find_sell_signals(candlestick_data):
              is_volume_greater_than_average(candle, candlestick_data) and \
              is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
              is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-            if(idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2):
+            print(idx,"----", len(candlestick_data))
+            if(idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2) or idx == len(candlestick_data) - 3:
                 return "yes"
 
             sell_signals.append(candle)
@@ -378,25 +381,23 @@ def Scanner():
             Wrapper_obj = Binance_Api_wrapper_generic()
             client = Wrapper_obj.get_client()
 
-            starttime = time.time()
+            current_datetime = datetime.datetime.now()
             Scanned_all = []
-            print(starttime)
-
-            print("started scanning ")
+            print("scanning date and time ",current_datetime)
             symbol_list = (Wrapper_obj.get_all_symbols_binance(client))
             for s in symbol_list['symbols']:
                 try:
                     Future_scan =  find_movement_based_on_time_frame(s, client, "future", Scanned_all,Wrapper_obj)
                 except Exception as ex1:
-                    print('Error creating batch: %s' % str(ex1))
+                    print(s['symbol'])
+                    print('Error creating batch: %s' % str(ex1),    print(s['symbol']))
                     import traceback
                     traceback.print_exc()
-            print(" #{starttime} ended scanning ")
-            print(starttime)
-            time.sleep(300.0 - ((time.time() - starttime) % 60.0))
+
         except Exception as ex1:
             print('Error creating batch: %s' % str(ex1))
             time.sleep(100)
 
-
 Scanner()
+
+
