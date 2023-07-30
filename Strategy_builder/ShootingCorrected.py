@@ -195,7 +195,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
                 if boldifSati and is_outside_bollinger_upper(candle, candle['BollingerUpper']):
                     print("bolinger diff i sufficent  ", s['symbol'])
                     sell = "yes"
-                elif boldifSati and is_inside_bollinger_upper(candle, candle['BollingerUpper']):
+                elif boldifSati and is_inside_bollinger_upper(candle, candle['BollingerUpper'],  candle['BollingerLower']):
                     print("Buy condition matched", s['symbol'], candle)
 
 
