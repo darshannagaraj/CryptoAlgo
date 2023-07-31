@@ -182,30 +182,35 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
     # timeFrame =  is_candle_completed(df, 5)
     sell =""
     # Filter data for faster access
-    previous_candles = df.iloc[-7:-2]
-    candle = df.iloc[-2: -1].to_dict(orient='records')[0]
-    boldifSati, diff = is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower'])
+    previous_candles = df.iloc[-8:-3]
+    pcandle = df.iloc[-3: -2].to_dict(orient='records')[0]
+    JustCandle = df.iloc[-2: -1].to_dict(orient='records')[0]
+    boldifSati, diff = is_bollinger_difference_sufficient(pcandle['BollingerUpper'], pcandle['BollingerLower'])
 
-    if (is_shooting_star(candle,previous_candles) or  (is_candle_red(candle, previous_candles)) ):
-        # print ("substabtial red candle", s['symbol'])
-        if is_volume_greater_than_average(candle, df):
-            # print("volume above avergae", s['symbol'])
-            if is_volume_greater_than_previous(candle, previous_candles):
-                # print("volume is greter than previous ", s['symbol'])
-                if boldifSati and is_outside_bollinger_upper(candle, candle['BollingerUpper']):
-                    print("bolinger diff i sufficent  ", s['symbol'])
+    if is_volume_greater_than_average(pcandle, df):
+        print("volume above avergae", s['symbol'])
+        if is_volume_greater_than_previous(pcandle, previous_candles):
+            print("volume is greter than previous ", s['symbol'])
+            if boldifSati and is_outside_bollinger_upper(pcandle, pcandle['BollingerUpper']):
+                print("bolinger diff i sufficent  ", s['symbol'])
+                if (is_shooting_star(JustCandle, previous_candles) or (is_candle_red(JustCandle, previous_candles))):
+                    print("substabtial red candle", s['symbol'])
                     sell = "yes"
-                elif boldifSati and is_inside_bollinger_upper(candle, candle['BollingerUpper'],  candle['BollingerLower']):
-                    print("Buy condition matched", s['symbol'], candle)
-
+            elif boldifSati and is_inside_bollinger_upper(pcandle, pcandle['BollingerUpper'],
+                                                          pcandle['BollingerLower']):
+                print("Buy condition matched", s['symbol'], pcandle)
 
     if sell == "yes":
         sl = calculate_stop_lossForSell(df.iloc[-1:])
         sl1 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl2 = calculate_stop_lossForSell(df.iloc[-2:])
+        sl2 = calculate_stop_lossForSell(df.iloc[-3:])
         sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
+        if abs(sl - JustCandle['Close']) / JustCandle['Close'] <= 1:
+            sl = sl + (sl * 0.005)
+            decimal_count = count_decimal_places(sl)
+            sl = round(float(sl), decimal_count)
         print(sl)
-        PlaceOrder("SELL", candle, sl, s)
+        PlaceOrder("SELL", JustCandle, sl, s)
     # if is_shooting_star(candle,previous_candles) :
     #     print("shooting star", s['symbol'])
     # if is_volume_greater_than_previous(candle, previous_candles):
