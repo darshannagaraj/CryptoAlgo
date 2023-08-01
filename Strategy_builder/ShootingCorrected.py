@@ -81,6 +81,16 @@ def is_hammer(candle, average_candle_size):
 
     return body_size <= average_candle_size * 0.5 and lower_shadow >= body_size * 2
 
+def is_shooting_star_buy(candle,candlestick_data) :
+    #, average_candle_size):
+    average_candle_size = candlestick_data['High'].mean() - candlestick_data['Low'].mean()
+
+    body_size = abs(candle['Open'] - candle['Close'])
+    upper_shadow = candle['High'] - max(candle['Open'], candle['Close'])
+    lower_shadow = min(candle['Open'], candle['Close']) - candle['Low']
+
+    return lower_shadow >= 2 * body_size and body_size >= upper_shadow * 2 and body_size > average_candle_size
+
 
 def is_shooting_star(candle,candlestick_data) :
     #, average_candle_size):
@@ -181,6 +191,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
 
     # timeFrame =  is_candle_completed(df, 5)
     sell =""
+    buy =""
     # Filter data for faster access
     previous_candles = df.iloc[-8:-3]
     pcandle = df.iloc[-3: -2].to_dict(orient='records')[0]
@@ -193,12 +204,14 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
             print("volume is greter than previous ", s['symbol'])
             if boldifSati and is_outside_bollinger_upper(pcandle, pcandle['BollingerUpper']):
                 print("bolinger diff i sufficent  ", s['symbol'])
-                if (is_shooting_star(JustCandle, previous_candles) or (is_candle_red(JustCandle, previous_candles))):
+                if (is_shooting_star(pcandle, previous_candles) or is_candle_red(pcandle, previous_candles)):
                     print("substabtial red candle", s['symbol'])
                     sell = "yes"
-            elif boldifSati and is_inside_bollinger_upper(pcandle, pcandle['BollingerUpper'],
-                                                          pcandle['BollingerLower']):
-                print("Buy condition matched", s['symbol'], pcandle)
+            elif boldifSati and is_outside_bollinger_lower(pcandle, pcandle['BollingerLower']):
+                if is_exhaustive_volume(pcandle, df) and is_shooting_star_buy(pcandle, previous_candles):
+                    print("Buy condition matched", s['symbol'], pcandle)
+                    buy = "yes"
+    # or (is_candle_red(pcandle, previous_candles)
 
     if sell == "yes":
         sl = calculate_stop_lossForSell(df.iloc[-1:])
@@ -211,6 +224,19 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
             sl = round(float(sl2), decimal_count)
         print(sl)
         PlaceOrder("SELL", JustCandle, sl, s)
+
+    elif buy == "yes":
+        sl = calculate_stop_lossForBuy(df.iloc[-1:])
+        sl1 = calculate_stop_lossForBuy(df.iloc[-2:])
+        sl2 = calculate_stop_lossForBuy(df.iloc[-3:])
+        sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
+        if abs(sl - JustCandle['Close']) / JustCandle['Close'] <= 1:
+            sl = sl + (sl * 0.005)
+            decimal_count = count_decimal_places(sl2)
+            sl = round(float(sl2), decimal_count)
+        print(sl)
+        PlaceOrder("BUY", JustCandle, sl, s)
+
     # if is_shooting_star(candle,previous_candles) :
     #     print("shooting star", s['symbol'])
     # if is_volume_greater_than_previous(candle, previous_candles):
@@ -297,6 +323,8 @@ def extreme_bullishCandle(candle):
 def is_outside_bollinger_upper(candle, bollinger_upper):
     return candle['Close'] > bollinger_upper
 
+def is_outside_bollinger_lower(candle, bollinger_lower):
+    return candle['Close'] > bollinger_lower
 
 def is_inside_bollinger_upper(candle, bollinger_upper, bollinger_lower):
     return candle['Close'] < bollinger_upper and candle['Close'] > bollinger_lower
@@ -307,12 +335,15 @@ def is_volume_greater_than_previous(candle, previous_candles):
 
     return all(current_volume > volume for volume in previous_volumes)
 
+def is_exhaustive_volume(candle, previous_candles):
+    return candle['Volume'] > (previous_candles['Volume'].mean() *3)
+
 def is_volume_greater_than_previousAvg(candle, previous_candles):
     return candle['Volume'] > previous_candles['Volume'].mean()
 
 
 def is_volume_greater_than_average(candle, candles, average_period=40):
-    return candle['Volume'] > candles['Volume'].rolling(average_period).mean().iloc[-1]
+    return candle['Volume'] > (candles['Volume'].rolling(average_period).mean().iloc[-1] * 1.5)
 
 
 def is_bollinger_difference_sufficient(bollinger_upper, bollinger_lower, threshold=0.023):
