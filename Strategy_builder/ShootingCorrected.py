@@ -324,7 +324,7 @@ def is_outside_bollinger_upper(candle, bollinger_upper):
     return candle['Close'] > bollinger_upper
 
 def is_outside_bollinger_lower(candle, bollinger_lower):
-    return candle['Close'] > bollinger_lower
+    return candle['Close'] < bollinger_lower
 
 def is_inside_bollinger_upper(candle, bollinger_upper, bollinger_lower):
     return candle['Close'] < bollinger_upper and candle['Close'] > bollinger_lower
