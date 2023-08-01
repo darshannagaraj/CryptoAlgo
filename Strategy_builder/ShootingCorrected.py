@@ -214,7 +214,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
     # or (is_candle_red(pcandle, previous_candles)
 
     if sell == "yes":
-        sl = calculate_stop_lossForSell(df.iloc[-1:])
+        sl = calculate_stop_lossForSell(df.iloc[-3: -2])
         sl1 = calculate_stop_lossForSell(df.iloc[-2:])
         sl2 = calculate_stop_lossForSell(df.iloc[-3:])
         sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
@@ -226,7 +226,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
         PlaceOrder("SELL", JustCandle, sl, s)
 
     elif buy == "yes":
-        sl = calculate_stop_lossForBuy(df.iloc[-1:])
+        sl = calculate_stop_lossForBuy(df.iloc[-3: -2])
         sl1 = calculate_stop_lossForBuy(df.iloc[-2:])
         sl2 = calculate_stop_lossForBuy(df.iloc[-3:])
         sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
