@@ -207,8 +207,8 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
         sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
         if abs(sl - JustCandle['Close']) / JustCandle['Close'] <= 1:
             sl = sl + (sl * 0.005)
-            decimal_count = count_decimal_places(sl)
-            sl = round(float(sl), decimal_count)
+            decimal_count = count_decimal_places(sl2)
+            sl = round(float(sl2), decimal_count)
         print(sl)
         PlaceOrder("SELL", JustCandle, sl, s)
     # if is_shooting_star(candle,previous_candles) :
