@@ -234,6 +234,15 @@ def find_symbols_close_to_vwap(df, threshold_lower=0.8, threshold_higher=1.2):
     lower_band = df['lower_band'].iloc[-1]
     higher_band = df['higher_band'].iloc[-1]
     return lower_band <= price <= higher_band
+def find_dictionary_by_key(list_of_dicts, key, value):
+    for dictionary in list_of_dicts:
+        if dictionary.get(key) == value:
+            return dictionary
+    return None
+
+def getLatestPrice(client, symbol):
+    dt1 = client.get_all_tickers()
+    latestPrice = find_dictionary_by_key(dt1, 'symbol', symbol)
 
 def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_obj, drop_rows=0 ):
 
@@ -300,8 +309,10 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
         sl1 = calculate_stop_lossForBuy(df.iloc[-2:])
         sl2 = calculate_stop_lossForBuy(df.iloc[-3:])
         sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
-        if abs(sl - JustCandle['Close']) / JustCandle['Close'] <= 1:
-            sl = sl + (sl * 0.005)
+        dt1 = client.get_all_tickers()
+        latestPrice= find_dictionary_by_key(dt1, 'symbol', s['symbol'])
+        if abs(sl - JustCandle['Close']) / JustCandle['Close'] <= 1 or latestPrice > sl:
+            sl = sl - (sl * 0.005)
             decimal_count = count_decimal_places(sl2)
             sl = round(float(sl2), decimal_count)
         print(sl)
@@ -349,6 +360,14 @@ def PlaceOrder(type, candle, sl,obj):
     pos_info = client.futures_position_information()
     pos = get_postion_details(obj['symbol'], pos_info)
     Entry_usdt = 150
+    latestPrice = getLatestPrice(client, obj['symbol'])
+    decimal_count = count_decimal_places(sl)
+    if type == "BUY" and sl < latestPrice:
+        newsl = latestPrice - (sl * 0.005)
+        newsl = round(float(sl), decimal_count)
+    elif type == "SELL" and sl > latestPrice:
+        newsl = latestPrice + (sl * 0.005)
+        newsl = round(float(sl), decimal_count)
 
     if float(pos['positionAmt']) == 0:
         print("here placing order")
