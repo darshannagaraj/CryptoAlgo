@@ -282,7 +282,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
             print("volume is greter than previous ", s['symbol'])
             if boldifSati and is_outside_bollinger_upper(pcandle, pcandle['BollingerUpper']):
                 print("bolinger diff i sufficent  ", s['symbol'])
-                if (special_candle(pcandle) or is_shooting_star(pcandle, previous_candles) or (is_extreme_bearish_candle(JustCandle) or is_extreme_bearish_candle((pcandle)) )):
+                if (special_candle(pcandle) or is_shooting_star(pcandle, previous_candles) or is_extreme_bearish_candle(pcandle)):
                     print("substabtial red candle", s['symbol'])
                     sell = "yes"
             elif boldifSati and is_outside_bollinger_lower(pcandle, pcandle['BollingerLower']):
@@ -432,7 +432,7 @@ def is_volume_greater_than_previousAvg(candle, previous_candles):
 
 
 def is_volume_greater_than_average(candle, candles, average_period=40):
-    return candle['Volume'] > (candles['Volume'].rolling(average_period).mean().iloc[-1] * 2.25)
+    return candle['Volume'] > (candles['Volume'].rolling(average_period).mean().iloc[-1] * 4.25)
 
 
 def is_bollinger_difference_sufficient(bollinger_upper, bollinger_lower, threshold=0.023):
