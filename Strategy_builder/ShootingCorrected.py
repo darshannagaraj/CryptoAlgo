@@ -283,10 +283,11 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
             if boldifSati and is_outside_bollinger_upper(pcandle, pcandle['BollingerUpper']):
                 print("bolinger diff i sufficent  ", s['symbol'])
                 if (special_candle(pcandle) or is_shooting_star(pcandle, previous_candles) or is_extreme_bearish_candle(pcandle)):
-                    print("substabtial red candle", s['symbol'])
+                    print("substabtial red candle", s['symbol'], datetime.datetime.now())
                     sell = "yes"
             elif boldifSati and is_outside_bollinger_lower(pcandle, pcandle['BollingerLower']):
                 if is_exhaustive_volume(pcandle, df) and is_shooting_star_buy(pcandle, previous_candles):
+                    print("substabtial gree candle", s['symbol'], datetime.datetime.now())
                     print("Buy condition matched", s['symbol'], pcandle)
                     buy = "yes"
 
@@ -413,7 +414,7 @@ def is_outside_bollinger_upper(candle, bollinger_upper):
     return candle['High'] > bollinger_upper and candle['Close'] < bollinger_upper
 
 def is_outside_bollinger_lower(candle, bollinger_lower):
-    return candle['Close'] < bollinger_lower
+    return candle['Low'] < bollinger_lower
 
 def is_inside_bollinger_upper(candle, bollinger_upper, bollinger_lower):
     return candle['Close'] < bollinger_upper and candle['Close'] > bollinger_lower
