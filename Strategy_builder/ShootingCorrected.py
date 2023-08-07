@@ -242,7 +242,7 @@ def find_dictionary_by_key(list_of_dicts, key, value):
 
 def getLatestPrice(client, symbol):
     dt1 = client.get_all_tickers()
-    latestPrice = find_dictionary_by_key(dt1, 'symbol', symbol)
+    latestPrice = float(find_dictionary_by_key(dt1, 'symbol', symbol))
 
 def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_obj, drop_rows=0 ):
 
@@ -282,7 +282,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
             print("volume is greter than previous ", s['symbol'])
             if boldifSati and is_outside_bollinger_upper(pcandle, pcandle['BollingerUpper']):
                 print("bolinger diff i sufficent  ", s['symbol'])
-                if (special_candle(pcandle) or is_shooting_star(pcandle, previous_candles) or is_extreme_bearish_candle(pcandle)):
+                if (special_candle(pcandle) or is_shooting_star(pcandle, previous_candles) or extrembearish(pcandle)):
                     print("substabtial red candle", s['symbol'], datetime.datetime.now())
                     sell = "yes"
             elif boldifSati and is_outside_bollinger_lower(pcandle, pcandle['BollingerLower']):
