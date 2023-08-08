@@ -144,6 +144,12 @@ def calculate_stop_lossForBuy(candle):
     sl = np.minimum(candle['Low'].iloc[0], sl_price)  # 2% below the close price
     return sl
 
+def find_dictionary_by_key(list_of_dicts, key, value):
+    for dictionary in list_of_dicts:
+        if dictionary.get(key) == value:
+            return dictionary
+    return None
+
 
 def find_symbols_close_to_vwap(df, threshold_lower=0.8, threshold_higher=1.2):
     # Calculate VWAP bands using 1 standard deviation
@@ -193,6 +199,8 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
         print("\n")
 
     if (sell_signals == "yes"):
+        dt = client.get_all_tickers()
+        ab = find_dictionary_by_key(dt, 'symbol', s['symbol'])
         sl = calculate_stop_lossForSell(df.iloc[-1:])
         sl1 = calculate_stop_lossForSell(df.iloc[-2:])
         sl2 = calculate_stop_lossForSell(df.iloc[-2:])
@@ -369,7 +377,7 @@ def find_sell_signals(candlestick_data):
              is_volume_greater_than_average(candle, candlestick_data) and \
              is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
              is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-            print(idx,"----", len(candlestick_data))
+            print(idx,"reed----", len(candlestick_data))
             if(idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2) or idx == len(candlestick_data) - 3:
                 return "yes"
 
