@@ -118,7 +118,11 @@ def extremeBullish(df):
     return extreme_bullish_candles
 
 
-def is_extreme_bearish_candle(open_price, high_price, low_price, close_price):
+def is_extreme_bearish_candle(df):
+    open_price = df['Open']
+    high_price= df['High']
+    low_price = df['Low']
+    close_price = df['Close']
     body_size = abs(open_price - close_price)
     upper_shadow = high_price - max(open_price, close_price)
     lower_shadow = min(open_price, close_price) - low_price
@@ -282,7 +286,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
             print("volume is greter than previous ", s['symbol'])
             if boldifSati and is_outside_bollinger_upper(pcandle, pcandle['BollingerUpper']):
                 print("bolinger diff i sufficent  ", s['symbol'])
-                if (special_candle(pcandle) or is_shooting_star(pcandle, previous_candles) or extrembearish(pcandle)):
+                if (special_candle(pcandle) or is_shooting_star(pcandle, previous_candles) or is_extreme_bearish_candle(pcandle)):
                     print("substabtial red candle", s['symbol'], datetime.datetime.now())
                     sell = "yes"
             elif boldifSati and is_outside_bollinger_lower(pcandle, pcandle['BollingerLower']):
