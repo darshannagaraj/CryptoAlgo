@@ -241,12 +241,13 @@ def find_symbols_close_to_vwap(df, threshold_lower=0.8, threshold_higher=1.2):
 def find_dictionary_by_key(list_of_dicts, key, value):
     for dictionary in list_of_dicts:
         if dictionary.get(key) == value:
-            return dictionary
+            return dictionary['price']
     return 0
 
 def getLatestPrice(client, symbol):
     dt1 = client.get_all_tickers()
     latestPrice = (find_dictionary_by_key(dt1, 'symbol', symbol))
+    return float(latestPrice)
 
 def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_obj, drop_rows=0 ):
 
@@ -275,9 +276,9 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
     sell =""
     buy =""
     # Filter data for faster access
-    previous_candles = df.iloc[-8:-3]
-    pcandle = df.iloc[-3: -2].to_dict(orient='records')[0]
-    JustCandle = df.iloc[-2: -1].to_dict(orient='records')[0]
+    previous_candles = df.iloc[-8:-2]
+    pcandle = df.iloc[-2: -1].to_dict(orient='records')[0]
+    JustCandle = df.iloc[-1]#.to_dict(orient='records')[0]
     boldifSati, diff = is_bollinger_difference_sufficient(pcandle['BollingerUpper'], pcandle['BollingerLower'])
 
     if is_volume_greater_than_average(pcandle, df):
