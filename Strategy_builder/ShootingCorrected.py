@@ -242,11 +242,11 @@ def find_dictionary_by_key(list_of_dicts, key, value):
     for dictionary in list_of_dicts:
         if dictionary.get(key) == value:
             return dictionary
-    return None
+    return 0
 
 def getLatestPrice(client, symbol):
     dt1 = client.get_all_tickers()
-    latestPrice = float(find_dictionary_by_key(dt1, 'symbol', symbol))
+    latestPrice = (find_dictionary_by_key(dt1, 'symbol', symbol))
 
 def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_obj, drop_rows=0 ):
 
