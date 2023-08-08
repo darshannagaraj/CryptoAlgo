@@ -546,7 +546,7 @@ def Scanner():
 
             analysis_time = datetime.datetime.now() - last_run_time
             # Wait for the remaining time (at least 2 minutes) before starting the next analysis
-            remaining_time = datetime.timedelta(minutes=3) - analysis_time
+            remaining_time = datetime.timedelta(minutes=4) - analysis_time
             if remaining_time.total_seconds() > 0:
                 time.sleep(remaining_time.total_seconds())
 
