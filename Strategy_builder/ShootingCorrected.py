@@ -6,6 +6,8 @@ import numpy as np
 import sys
 import logging
 
+from lib.genericCode import volumeGainers
+
 logging.basicConfig(
     level=logging.ERROR,  # Set the logging level (e.g., DEBUG, INFO, WARNING, ERROR)
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -296,7 +298,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
                     print("Buy condition matched", s['symbol'], pcandle)
                     buy = "yes"
 
-    # or (is_candle_red(pcandle, previous_candles)
+
 
     if sell == "yes":
         sl = calculate_stop_lossForSell(df.iloc[-3: -2])
@@ -323,6 +325,19 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
             sl = round(float(sl2), decimal_count)
         print(sl)
         PlaceOrder("BUY", JustCandle, sl, s)
+
+
+    # or (is_candle_red(pcandle, previous_candles)
+    volumeGainers(df, 40)
+    # vwapslope(df)
+    selected_rows = df[df['allSell'] == True]
+    if len(selected_rows) > 0:
+        print(s['symbol'])
+        if (selected_rows['Volume'].iloc[-1] * selected_rows['Close'].iloc[0]) > 200000:
+            if df['Time'].iloc[-2] == selected_rows['Time'].iloc[-1]:
+                print("Sell condition matched by latest strategy", s['symbol'], pcandle)
+            print(selected_rows)
+
 
     # if is_shooting_star(candle,previous_candles) :
     #     print("shooting star", s['symbol'])
@@ -369,10 +384,10 @@ def PlaceOrder(type, candle, sl,obj):
     latestPrice = getLatestPrice(client, obj['symbol'])
     decimal_count = count_decimal_places(sl)
     if type == "BUY" and sl < latestPrice:
-        newsl = latestPrice - (sl * 0.005)
+        newsl = latestPrice - (sl * 0.0225)
         newsl = round(float(sl), decimal_count)
     elif type == "SELL" and sl > latestPrice:
-        newsl = latestPrice + (sl * 0.005)
+        newsl = latestPrice + (sl * 0.0225)
         newsl = round(float(sl), decimal_count)
 
     if float(pos['positionAmt']) == 0:
