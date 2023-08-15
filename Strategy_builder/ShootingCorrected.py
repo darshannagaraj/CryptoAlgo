@@ -6,7 +6,7 @@ import numpy as np
 import sys
 import logging
 
-from lib.genericCode import volumeGainers
+
 
 logging.basicConfig(
     level=logging.ERROR,  # Set the logging level (e.g., DEBUG, INFO, WARNING, ERROR)
@@ -33,6 +33,8 @@ import btalib
 from binance.enums import FUTURE_ORDER_TYPE_TAKE_PROFIT_MARKET, HistoricalKlinesType
 import time
 import pytz
+
+from lib.genericCode import volumeGainers
 from lib.database import insert_scanned_data
 
 
@@ -336,7 +338,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
         if (selected_rows['Volume'].iloc[-1] * selected_rows['Close'].iloc[0]) > 200000:
             if df['Time'].iloc[-2] == selected_rows['Time'].iloc[-1]:
                 print("Sell condition matched by latest strategy", s['symbol'], pcandle)
-            print(selected_rows)
+            # print(selected_rows)
 
 
     # if is_shooting_star(candle,previous_candles) :
