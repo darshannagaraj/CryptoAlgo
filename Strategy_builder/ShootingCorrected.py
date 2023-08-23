@@ -338,6 +338,8 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
         if (selected_rows['Volume'].iloc[-1] * selected_rows['Close'].iloc[0]) > 200000:
             if df['Time'].iloc[-2] == selected_rows['Time'].iloc[-1]:
                 print("Sell condition matched by latest strategy", s['symbol'], pcandle)
+                PlaceOrder("SELL", JustCandle, JustCandle['High'], s)
+
             # print(selected_rows)
 
 
@@ -385,10 +387,11 @@ def PlaceOrder(type, candle, sl,obj):
     Entry_usdt = 150
     latestPrice = getLatestPrice(client, obj['symbol'])
     decimal_count = count_decimal_places(sl)
-    if type == "BUY" and sl < latestPrice:
+    latestPrice1 = latestPrice
+    if type == "BUY" and sl < latestPrice and sl < (latestPrice - (sl * 0.0225)):
         newsl = latestPrice - (sl * 0.0225)
         newsl = round(float(sl), decimal_count)
-    elif type == "SELL" and sl > latestPrice:
+    elif type == "SELL" and sl > latestPrice and sl > (latestPrice + (sl * 0.0225)):
         newsl = latestPrice + (sl * 0.0225)
         newsl = round(float(sl), decimal_count)
 
@@ -405,6 +408,8 @@ def PlaceOrder(type, candle, sl,obj):
 
         sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, abs(float(xrp_positions['positionAmt'])), sl, client)
         print("order -", order, "sl order " , sl_order)
+
+        # Wrapper_obj.create_take_profit_market_order()
     #
     # elif(float(pos['positionAmt']) <= 0):
     #     sltype = "SELL" if type == "BUY" else "BUY"
