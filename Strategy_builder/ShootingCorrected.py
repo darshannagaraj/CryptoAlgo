@@ -405,9 +405,20 @@ def PlaceOrder(type, candle, sl,obj):
 
         sltype = "SELL" if type == "BUY" else "BUY"
         xrp_positions = [pos for pos in client.futures_account()['positions'] if pos['symbol'] == obj['symbol']][0]
+        try:
+            sl_order = Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype,
+                                                                 abs(float(xrp_positions['positionAmt'])), sl, client)
+        except Exception as ex1:
+            if "Order would immediately trigger" in ex1:
+                if type == "BUY" and sl < latestPrice and sl < (latestPrice - (sl * 0.0225)):
+                    newsl = latestPrice - (sl * 0.0225)
+                    newsl = round(float(sl), decimal_count)
+                elif type == "SELL" and sl > latestPrice and sl > (latestPrice + (sl * 0.0225)):
+                    newsl = latestPrice + (sl * 0.0225)
+                    newsl = round(float(sl), decimal_count)
 
-        sl_order =Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, abs(float(xrp_positions['positionAmt'])), sl, client)
-        print("order -", order, "sl order " , sl_order)
+                sl_order = Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype,
+                                                                 abs(float(xrp_positions['positionAmt'])), sl, client)
 
         # Wrapper_obj.create_take_profit_market_order()
     #
