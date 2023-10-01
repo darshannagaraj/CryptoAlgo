@@ -300,7 +300,7 @@ def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_
                     print("Buy condition matched", s['symbol'], pcandle)
                     buy = "yes"
 
-
+    buy=find_superbuy_signals(df)
 
     if sell == "yes":
         sl = calculate_stop_lossForSell(df.iloc[-3: -2])
@@ -476,6 +476,101 @@ def is_volume_greater_than_average(candle, candles, average_period=40):
 
 def is_bollinger_difference_sufficient(bollinger_upper, bollinger_lower, threshold=0.023):
     return (bollinger_upper - bollinger_lower) >= bollinger_upper * threshold, (bollinger_upper - bollinger_lower)
+
+# Condition 3: 3 candles prior to crossover price was above the crossed Moving average
+def above_ma_prior(crossover, ma_column, df):
+    mask = (df['Close'].shift(4) > df[ma_column].shift(4)) & (df['Close'].shift(3) > df[ma_column].shift(3)) & (df['Close'].shift(2) > df[ma_column].shift(2))
+    return crossover & mask
+
+def find_superbuy_signals(df):
+    buy_signals = []
+
+    # Calculate Bollinger Bands
+
+    df['SMA_200'] = df['Close'].rolling(window=200).mean()
+    df['SMA_90'] = df['Close'].rolling(window=90).mean()
+    df['SMA_150'] = df['Close'].rolling(window=150).mean()
+    df['SMA_75'] = df['Close'].rolling(window=75).mean()
+
+    # Condition 1: Price is above SMA for almost 1 hour
+    # Assuming your data is minute-based. Adjust accordingly if different.
+    hourly_above_sma = df[df['Close'].rolling(window=60).min() > df[['SMA_200', 'SMA_90', 'SMA_150', 'SMA_75']].rolling(
+        window=60).max().max(axis=1)]
+
+    # Condition 2: Price crossover any of the moving averages
+    crossover_200 = (df['Close'] > df['SMA_200']) & (df['Close'].shift(1) <= df['SMA_200'].shift(1))
+    crossover_90 = (df['Close'] > df['SMA_90']) & (df['Close'].shift(1) <= df['SMA_90'].shift(1))
+    crossover_150 = (df['Close'] > df['SMA_150']) & (df['Close'].shift(1) <= df['SMA_150'].shift(1))
+    crossover_75 = (df['Close'] > df['SMA_75']) & (df['Close'].shift(1) <= df['SMA_75'].shift(1))
+    crossover_points = df[crossover_200 | crossover_90 | crossover_150 | crossover_75]
+
+    condition_3_200 = above_ma_prior(crossover_200, 'SMA_200', df)
+    condition_3_90 = above_ma_prior(crossover_90, 'SMA_90', df)
+    condition_3_150 = above_ma_prior(crossover_150, 'SMA_150', df)
+    condition_3_75 = above_ma_prior(crossover_75, 'SMA_75', df)
+    condition_3_points = df[condition_3_200 | condition_3_90 | condition_3_150 | condition_3_75]
+
+    # Condition 4: 200SMA < 150SMA and 150SMA < 90SMA
+    condition_4_points = df[(df['SMA_200'] < df['SMA_150'])]
+    threshold_percentage = 0.01  # 1%
+    n_candles = 10  # 3 hours assuming minute intervals
+    exclude_candles = 5  # exclude the last 20 minutes
+
+    # Calculate differences between SMAs
+    df['Diff_200_150'] = df['SMA_200'] - df['SMA_150']
+    # df['Diff_150_90'] = df['SMA_150'] - df['SMA_90']
+
+    # Condition 5: Moving averages running like train tracks over the last 3 hours excluding last 20 mins
+    consistent_diff_200_150 = (
+            df['Diff_200_150'].shift(exclude_candles).rolling(n_candles).std() < threshold_percentage * df[
+        'Diff_200_150'].shift(exclude_candles).rolling(n_candles).mean()
+    )
+    # consistent_diff_150_90 = (
+    #         df['Diff_150_90'].shift(exclude_candles).rolling(n_candles).std() < threshold_percentage * df[
+    #     'Diff_150_90'].shift(exclude_candles).rolling(n_candles).mean()
+    # )
+
+    condition_5_points = df[consistent_diff_200_150]
+
+
+    # print("Condition 1 Points: hourlly cndition met ")
+    # print(hourly_above_sma)
+    # print("\nCondition 2 Points: cross over ")
+    # print(crossover_points)
+    # print("\nCondition 3 Points:prior ma condtion")
+    # print(condition_3_points)
+    # print("\nCondition 4 Points:200SMA < 150SMA and 150SMA < 90SMA")
+    # print(condition_4_points)
+    # Combine all conditions
+    # Combine all conditions
+    all_conditions_met = crossover_points.index.intersection(
+        condition_3_points.index.intersection(
+                condition_5_points.index
+            # )
+        )
+    )
+
+    trade_signals = df.loc[all_conditions_met]
+    if not trade_signals.empty:
+        if trade_signals.index[-1] == df.index[-2]:  # Check if the last signal is from the previous candle
+            print("The trade signal was generated from the previous candle!")
+            print( trade_signals.tail(1) )
+            return "yes"  #
+
+    # time_period = pd.to_timedelta('2 hours')
+    #
+    # # Filter data for faster access
+    # previous_candles = candlestick_data.iloc[-5:]
+    #
+    # for idx, candle in candlestick_data.iterrows():
+    #     if  extreme_bullishCandle(candle) and\
+    #            candle['Close']
+    #             # candle['oi_change_last2_pc'] > 2:
+    #         if idx == len(candlestick_data) - 1 or  idx == len(candlestick_data) - 2:
+    #             return "yes"
+    #         buy_signals.append(candle)
+    #
+    # return buy_signals
 
 
 def find_buy_signals(candlestick_data):
