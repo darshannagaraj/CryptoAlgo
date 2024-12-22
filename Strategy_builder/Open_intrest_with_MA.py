@@ -134,7 +134,7 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     five_minute = getminutedata(s['symbol'],client.KLINE_INTERVAL_5MINUTE,3, market_type,client)
     five_minute.drop(five_minute.tail(drop_rows).index,
             inplace=True)
-    hist_data = client.futures_open_interest_hist(symbol=s['symbol'], period=client.KLINE_INTERVAL_5MINUTE,
+    hist_data = client.futures_open_interest_hist(symbol=s['symbol'], period=client.KLINE_INTERVAL_1DAY,
                                                   limit=50)
     oi_df= Binance_api_helper.convert_hash_to_data_frame(hist_data)
     Binance_api_helper.oi_change(oi_df)

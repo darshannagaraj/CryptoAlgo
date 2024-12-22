@@ -85,8 +85,8 @@ def getminutedata(symbol, interval, lookback, MarketType, client):
                                                           klines_type=HistoricalKlinesType.SPOT))
 
     frame = frame.iloc[:, :6]
-    frame.columns = ['Time', 'Open', 'High', 'Low', 'Close', 'Volume']
-    frame = frame.set_index('Time')
+    frame.columns = ['timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']
+    frame = frame.set_index('timestamp')
     frame.index = pd.to_datetime(frame.index, unit='ms')
     frame = frame.astype(float)
     return frame

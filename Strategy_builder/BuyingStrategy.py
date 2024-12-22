@@ -144,12 +144,6 @@ def calculate_stop_lossForBuy(candle):
     sl = np.minimum(candle['Low'].iloc[0], sl_price)  # 2% below the close price
     return sl
 
-def find_dictionary_by_key(list_of_dicts, key, value):
-    for dictionary in list_of_dicts:
-        if dictionary.get(key) == value:
-            return dictionary
-    return None
-
 
 def find_symbols_close_to_vwap(df, threshold_lower=0.8, threshold_higher=1.2):
     # Calculate VWAP bands using 1 standard deviation
@@ -161,7 +155,8 @@ def find_symbols_close_to_vwap(df, threshold_lower=0.8, threshold_higher=1.2):
     lower_band = df['lower_band'].iloc[-1]
     higher_band = df['higher_band'].iloc[-1]
     return lower_band <= price <= higher_band
-def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_obj,drop_rows=0 ):
+
+def find_movement_based_on_time_frame(s,client,market_type, Scanned_all,wrapper_obj, drop_rows=0 ):
 
     atr_period = 10
     atr_multiplier = 3.0
@@ -169,81 +164,122 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     five_minute = getminutedata(s['symbol'],client.KLINE_INTERVAL_5MINUTE,1, market_type,client)
     five_minute.drop(five_minute.tail(drop_rows).index,
             inplace=True)
-    # hist_data = client.futures_open_interest_hist(symbol=s['symbol'], period=client.KLINE_INTERVAL_5MINUTE,
-    #
-    # limit=25)
-    # print("Shooting star patterns:")
-    # oi_df= Binance_api_helper.convert_hash_to_data_frame(hist_data)
-    # Binance_api_helper.oi_change(oi_df)
-    # Binance_api_helper.oi_change_candles(oi_df, 1)
-    # Binance_api_helper.oi_change_candles(oi_df, 2)
-    # # five_minute['oi_change_last2'] = oi_df['oi_change_last2']
-    # five_minute['oi_change_last2_pc'] = oi_df['oi_change_last2_pc']
-    # # shooting_stars = find_shooting_stars(five_minute)
-
 
     five_minute.reset_index(inplace=True)
+    # five_minute = five_minute.loc[five_minute.Time <= specifictime]
     df = five_minute
     # Find Sell signals
-    sell_signals = find_sell_signals(df)
-    buy_signals = find_superbuy_signals(df)
+    # df = df.drop(df.index[-95])
+
 
     vwapStatus = find_symbols_close_to_vwap(five_minute)
     VWAP = calculate_vwap_bands(five_minute, num_std_dev=1)
+    df['SMA'] = df['Close'].rolling(window=20).mean()
+    df['STD'] = df['Close'].rolling(window=20).std()
+    df['BollingerUpper'] = df['SMA'] + 2 * df['STD']
+    df['BollingerLower'] = df['SMA'] - 2 * df['STD']
 
-    for idx, shooting_star in enumerate(sell_signals):
-        current_datetime = datetime.datetime.now()
-        print(current_datetime, s['symbol'])
-        print(f"Pattern {idx + 1}:")
-        print(shooting_star)
-        print("\n")
+    # timeFrame =  is_candle_completed(df, 5)
+    sell =""
+    # Filter data for faster access
+    previous_candles = df.iloc[-7:-2]
+    candle = df.iloc[-2: -1].to_dict(orient='records')[0]
+    boldifSati, diff = is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower'])
 
-    if (sell_signals == "yes"):
-        dt = client.get_all_tickers()
-        ab = find_dictionary_by_key(dt, 'symbol', s['symbol'])
-        sl = calculate_stop_lossForSell(df.iloc[-1:])
-        sl1 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl2 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl = np.maximum(np.maximum(sl,sl1) ,sl2) # 2% below the close price
-        # insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
-        #
-        #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
-        PlaceOrder("SELL", df.iloc[-1:], sl, s)
+    # if is_volume_greater_than_previous(candle, previous_candles):
+    if is_volume_greater_than_average(candle, df):
+        if is_inside_bollinger_upper(candle, candle['BollingerUpper'],
+                                                          candle['BollingerLower']):
+            if extreme_bullishCandle(candle):
+                if diff <= 0.5 :
+                    print("Buy condition matched", s['symbol'], candle)
 
-    if (buy_signals == "yes"):
-        sl = calculate_stop_lossForBuy(df.iloc[-1:])
-        sl1 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl2 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl = np.minimum(np.minimum(sl,sl1) ,sl2)
-        # insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
-        #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
-        PlaceOrder("BUY", df.iloc[-1:], sl, s)
+    # Calculate the percentage change in the high and low prices
+    df['High_pct_change'] = df['High'].pct_change() * 100
+    df['Low_pct_change'] = df['Low'].pct_change() * 100
 
-    # for idx, (signal_candle, signal_type) in enumerate(buy_signals):
-    #     print(f"Signal {idx + 1} ({signal_type}):")
-    #     print(signal_candle)
-    #     print("\n")
-    #     insert_scanned_data(datetime.now(), s['symbol'], "SELL", "BUY Signal", "CRYPTO",
-    #                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
+    # Check if the stock's high and low percentage changes have been less than 0.06% for almost 16 hours
+    narrow_range_threshold = 0.06  # 0.06% threshold for narrow range
+    narrow_range_duration = 192  # Minimum duration for which the range should be narrow (16 hours * 12 periods per hour)
+
+    narrow_range = (
+            (abs(df['High_pct_change']) < narrow_range_threshold) &
+            (abs(df['Low_pct_change']) < narrow_range_threshold)
+    )
+
+
+    # Assuming you have already calculated the VWAP and stored it in a variable 'vwap'
+    vwap = 120  # Replace this with actual VWAP value
+
+    # Check if the stock's "Close" price is consistently above VWAP for the last 4 to 5 hours
+    consistently_above_vwap_duration = 48  # Minimum duration for which the stock should be consistently above VWAP (5 hours * 12 periods per hour)
+
+    above_vwap_duration = (df['Close'] > vwap).rolling(window=consistently_above_vwap_duration).sum()
+
+
+    # Check if the stock's volume has been high in the last 6 hours
+    high_volume_duration = 72  # Minimum duration for which the stock's volume should be high (6 hours * 12 periods per hour)
+
+    high_volume = (df['Volume'] > df['Volume'].mean()).rolling(window=high_volume_duration).sum()
+
+    if narrow_range.sum() >= narrow_range_duration:
+        # print("The stock has been in a narrow range for almost 16 hours.")
+        if above_vwap_duration.max() >= consistently_above_vwap_duration:
+            # print("The stock has been consistently above VWAP for the last 4 to 5 hours.")
+            if high_volume.max() >= high_volume_duration:
+                print("Narrow, tested with volume and consitently above vwap")
+                if is_volume_greater_than_average(candle, df):
+                    sl1 = calculate_stop_lossForBuy(df.iloc[-2:])
+                    sl2 = calculate_stop_lossForBuy(df.iloc[-3:])
+                    sl = calculate_stop_lossForBuy(df.iloc[-1:])
+                    sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
+                    print("Buying STOP loss", sl)
+                    PlaceOrder("BUY", candle, sl, s)
+
+    # if (is_shooting_star(candle,previous_candles) or  (is_candle_red(candle, previous_candles)) ):
+    #     # print ("substabtial red candle", s['symbol'])
+    #     if is_volume_greater_than_average(candle, df):
+    #         # print("volume above avergae", s['symbol'])
+    #         if is_volume_greater_than_previous(candle, previous_candles):
+    #             # print("volume is greter than previous ", s['symbol'])
+    #             if boldifSati and is_outside_bollinger_upper(candle, candle['BollingerUpper']):
+    #                 print("bolinger diff i sufficent  ", s['symbol'])
+    #                 sell = "yes"
+    #             elif boldifSati and is_inside_bollinger_upper(candle, candle['BollingerUpper'],  candle['BollingerLower']):
+    #                 print("Buy condition matched", s['symbol'], candle)
+
+
+    # if sell == "yes":
+    #     sl = calculate_stop_lossForSell(df.iloc[-1:])
+    #     sl1 = calculate_stop_lossForSell(df.iloc[-2:])
+    #     sl2 = calculate_stop_lossForSell(df.iloc[-2:])
+    #     sl = np.maximum(np.maximum(sl, sl1), sl2)  # 2% below the close price
+    #     print(sl)
+        # PlaceOrder("SELL", candle, sl, s)
+    # if is_shooting_star(candle,previous_candles) :
+    #     print("shooting star", s['symbol'])
+    # if is_volume_greater_than_previous(candle, previous_candles):
+    #     print("volume is greater than previous 5 candles", s['symbol'])
     #
-    # # Output the Sell signals
-    # print("Sell signals:")
-    # for idx, (signal_candle, signal_type) in enumerate(sell_signals):
-    #     print(f"Signal {idx + 1} ({signal_type}):")
-    #     print(signal_candle)
-    #     print("\n")
-    #     insert_scanned_data(datetime.now(), s['symbol'], "SELL", "SELL Signal", "CRYPTO",
-    #                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
+    # if  is_outside_bollinger_upper(candle, candle['BollingerUpper']):
+    #     print("candle is greater than upper bolinger ", s['symbol'])
 
-    # current_cl_index = len(five_minute.Close) - 1
-    # if five_minute['oi_change_last2_pc'].values[current_cl_index] > 2  :
-    #     insert_scanned_data(datetime.datetime.now(), s['symbol'], "TBD", "OI Change "+ five_minute['oi_change_last2_pc'].values[current_cl_index], "CRYPTO",
-    #                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
+    # if  is_volume_greater_than_average(candle, df):
+    #     print("volume is greater than average r ", s['symbol'])
+
+
+    # if boldifSati :
+    #     print("bolinger diff i sufficent  ", s['symbol'], diff/candle['Close'] * 100)
     #
-    # for idx, shooting_star in enumerate(sell_signals):
-    #     print(f"Pattern {idx + 1}:")
-    #     print(shooting_star)
-    #     print("\n")
+    # if (is_candle_red(candle, previous_candles)) :
+    #     print("deep red candle ", s['symbol'])
+    #
+    # if  extreme_bullishCandle(candle) and\
+    #             is_volume_greater_than_previous(candle, previous_candles) and \
+    #             is_volume_greater_than_average(candle, candlestick_data) and \
+    #             is_inside_bollinger_upper(candle, candle['BollingerUpper'],candle['BollingerLower']) and \
+    #             is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
+    #             # candle['oi_change_last2_pc'] > 2:
 
 def is_candle_red(candle,candlestick_data):
     average_candle_size = candlestick_data['High'].mean() - candlestick_data['Low'].mean()
@@ -283,6 +319,11 @@ def PlaceOrder(type, candle, sl,obj):
     #
     #     sl_order = Wrapper_obj.create_stop_loss_market_order(pos['symbol'], sltype, xrp_positions['positionAmt'], sl,
     #                                                          client)
+# Function to check if the current candle is completed
+def is_candle_completed(candle_dataframe,candleTime):
+    current_time = pd.Timestamp.now()  # Get the current time
+    last_data_point_time = candle_dataframe.index[-1]  # Get the timestamp of the last data point
+    return current_time >= last_data_point_time + pd.Timedelta(minutes=candleTime)  # Check if current time is >= last data point + 1 minute
 
 
 def is_candle_green(candle):
@@ -320,101 +361,8 @@ def is_volume_greater_than_average(candle, candles, average_period=40):
 
 
 def is_bollinger_difference_sufficient(bollinger_upper, bollinger_lower, threshold=0.023):
-    return (bollinger_upper - bollinger_lower) >= bollinger_upper * threshold
-# Condition 3: 3 candles prior to crossover price was above the crossed Moving average
-def above_ma_prior(crossover, ma_column, df):
-    mask = (df['Close'].shift(4) > df[ma_column].shift(4)) & (df['Close'].shift(3) > df[ma_column].shift(3)) & (df['Close'].shift(2) > df[ma_column].shift(2))
-    return crossover & mask
+    return (bollinger_upper - bollinger_lower) >= bollinger_upper * threshold, (bollinger_upper - bollinger_lower)
 
-
-def find_superbuy_signals(df):
-    buy_signals = []
-
-    # Calculate Bollinger Bands
-
-    df['SMA_200'] = df['Close'].rolling(window=200).mean()
-    df['SMA_90'] = df['Close'].rolling(window=90).mean()
-    df['SMA_150'] = df['Close'].rolling(window=150).mean()
-    df['SMA_75'] = df['Close'].rolling(window=75).mean()
-
-    # Condition 1: Price is above SMA for almost 1 hour
-    # Assuming your data is minute-based. Adjust accordingly if different.
-    hourly_above_sma = df[df['Close'].rolling(window=60).min() > df[['SMA_200', 'SMA_90', 'SMA_150', 'SMA_75']].rolling(
-        window=60).max().max(axis=1)]
-
-    # Condition 2: Price crossover any of the moving averages
-    crossover_200 = (df['Close'] > df['SMA_200']) & (df['Close'].shift(1) <= df['SMA_200'].shift(1))
-    crossover_90 = (df['Close'] > df['SMA_90']) & (df['Close'].shift(1) <= df['SMA_90'].shift(1))
-    crossover_150 = (df['Close'] > df['SMA_150']) & (df['Close'].shift(1) <= df['SMA_150'].shift(1))
-    crossover_75 = (df['Close'] > df['SMA_75']) & (df['Close'].shift(1) <= df['SMA_75'].shift(1))
-    crossover_points = df[crossover_200 | crossover_90 | crossover_150 | crossover_75]
-
-    condition_3_200 = above_ma_prior(crossover_200, 'SMA_200', df)
-    condition_3_90 = above_ma_prior(crossover_90, 'SMA_90', df)
-    condition_3_150 = above_ma_prior(crossover_150, 'SMA_150', df)
-    condition_3_75 = above_ma_prior(crossover_75, 'SMA_75', df)
-    condition_3_points = df[condition_3_200 | condition_3_90 | condition_3_150 | condition_3_75]
-
-    # Condition 4: 200SMA < 150SMA and 150SMA < 90SMA
-    condition_4_points = df[(df['SMA_200'] < df['SMA_150'])]
-    threshold_percentage = 0.01  # 1%
-    n_candles = 10  # 3 hours assuming minute intervals
-    exclude_candles = 5  # exclude the last 20 minutes
-
-    # Calculate differences between SMAs
-    df['Diff_200_150'] = df['SMA_200'] - df['SMA_150']
-    # df['Diff_150_90'] = df['SMA_150'] - df['SMA_90']
-
-    # Condition 5: Moving averages running like train tracks over the last 3 hours excluding last 20 mins
-    consistent_diff_200_150 = (
-            df['Diff_200_150'].shift(exclude_candles).rolling(n_candles).std() < threshold_percentage * df[
-        'Diff_200_150'].shift(exclude_candles).rolling(n_candles).mean()
-    )
-    # consistent_diff_150_90 = (
-    #         df['Diff_150_90'].shift(exclude_candles).rolling(n_candles).std() < threshold_percentage * df[
-    #     'Diff_150_90'].shift(exclude_candles).rolling(n_candles).mean()
-    # )
-
-    condition_5_points = df[consistent_diff_200_150]
-
-
-    # print("Condition 1 Points: hourlly cndition met ")
-    # print(hourly_above_sma)
-    # print("\nCondition 2 Points: cross over ")
-    # print(crossover_points)
-    # print("\nCondition 3 Points:prior ma condtion")
-    # print(condition_3_points)
-    # print("\nCondition 4 Points:200SMA < 150SMA and 150SMA < 90SMA")
-    # print(condition_4_points)
-    # Combine all conditions
-    # Combine all conditions
-    all_conditions_met = crossover_points.index.intersection(
-        condition_3_points.index.intersection(
-                condition_5_points.index
-            # )
-        )
-    )
-
-    trade_signals = df.loc[all_conditions_met]
-    if not trade_signals.empty:
-        if trade_signals.index[-1] == df.index[-2]:  # Check if the last signal is from the previous candle
-            print("The trade signal was generated from the previous candle!")
-            return trade_signals.tail(1)  #
-
-    # time_period = pd.to_timedelta('2 hours')
-    #
-    # # Filter data for faster access
-    # previous_candles = candlestick_data.iloc[-5:]
-    #
-    # for idx, candle in candlestick_data.iterrows():
-    #     if  extreme_bullishCandle(candle) and\
-    #            candle['Close']
-    #             # candle['oi_change_last2_pc'] > 2:
-    #         if idx == len(candlestick_data) - 1 or  idx == len(candlestick_data) - 2:
-    #             return "yes"
-    #         buy_signals.append(candle)
-    #
-    # return buy_signals
 
 def find_buy_signals(candlestick_data):
     buy_signals = []
@@ -453,30 +401,39 @@ def find_sell_signals(candlestick_data):
 
     # Filter data for faster access
     previous_candles = candlestick_data.iloc[-5:]
+    candle = candlestick_data.iloc[-1:]
+    if is_shooting_star(candle,previous_candles) :
+        print("shooting star", s['symbol'])
 
-    for idx, candle in candlestick_data.iterrows():
-        if ( is_shooting_star(candle,previous_candles) ) and\
-                is_volume_greater_than_previous(candle, previous_candles) and \
-                is_volume_greater_than_average(candle, candlestick_data) and \
-                is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
-                is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-            print(idx, "----", len(candlestick_data))
-            if idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2 or idx == len(candlestick_data) - 3:
-                return "yes"
 
-            sell_signals.append(candle)
-        elif (is_candle_red(candle, previous_candles)) and \
-             is_volume_greater_than_previous(candle, previous_candles) and \
-             is_volume_greater_than_average(candle, candlestick_data) and \
-             is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
-             is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-            print(idx,"reed----", len(candlestick_data))
-            if(idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2) or idx == len(candlestick_data) - 3:
-                return "yes"
-
-            sell_signals.append(candle)
+    # if ( is_shooting_star(candle,previous_candles) ) and\
+    #         is_volume_greater_than_previous(candle, previous_candles) and \
+    #         is_volume_greater_than_average(candle, candlestick_data) and \
+    #         is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
+    #         is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
+    #     print(idx, "----", len(candlestick_data))
+    #     if idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2 or idx == len(candlestick_data) - 3:
+    #         return "yes"
+    #
+    #     sell_signals.append(candle)
+    # elif (is_candle_red(candle, previous_candles)) and \
+    #      is_volume_greater_than_previous(candle, previous_candles) and \
+    #      is_volume_greater_than_average(candle, candlestick_data) and \
+    #      is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
+    #      is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
+    #     print(idx,"----", len(candlestick_data))
+    #     if(idx == len(candlestick_data) - 1 or idx == len(candlestick_data) - 2) or idx == len(candlestick_data) - 3:
+    #         return "yes"
+    #
+    #     sell_signals.append(candle)
+    #
+    #
     return sell_signals
 
+
+def wait_for_5_minutes_since_last_run(last_run_time):
+    while datetime.datetime.now() - last_run_time < datetime.timedelta(minutes=5):
+        time.sleep(1)
 
 
 def Scanner():
@@ -489,17 +446,29 @@ def Scanner():
             client = Wrapper_obj.get_client()
 
             current_datetime = datetime.datetime.now()
+            # Update the time of the last run
+            last_run_time = datetime.datetime.now()
+
             Scanned_all = []
             print("scanning date and time ",current_datetime)
             symbol_list = (Wrapper_obj.get_all_symbols_binance(client))
             for s in symbol_list['symbols']:
                 try:
-                    Future_scan =  find_movement_based_on_time_frame(s, client, "future", Scanned_all,Wrapper_obj)
+                    # Future_scan =  find_movement_based_on_time_frame(s, client, "future", Scanned_all,Wrapper_obj, '2023-07-29 17:25:00')
+                    find_movement_based_on_time_frame(s, client, "future", Scanned_all, Wrapper_obj)
+
                 except Exception as ex1:
                     print(s['symbol'])
                     print('Error creating batch: %s' % str(ex1),    print(s['symbol']))
                     import traceback
                     traceback.print_exc()
+
+
+            analysis_time = datetime.datetime.now() - last_run_time
+            # Wait for the remaining time (at least 2 minutes) before starting the next analysis
+            remaining_time = datetime.timedelta(minutes=3) - analysis_time
+            if remaining_time.total_seconds() > 0:
+                time.sleep(remaining_time.total_seconds())
 
         except Exception as ex1:
             print('Error creating batch: %s' % str(ex1))
@@ -507,4 +476,57 @@ def Scanner():
 
 Scanner()
 
+#         is_volume_greater_than_average(candle, candlestick_data) and \
+#         is_outside_bollinger_upper(candle, candle['BollingerUpper']) and \
+#         is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
 
+#
+# if (sell_signals == "yes"):
+#     sl = calculate_stop_lossForSell(df.iloc[-1:])
+#     sl1 = calculate_stop_lossForSell(df.iloc[-2:])
+#     sl2 = calculate_stop_lossForSell(df.iloc[-2:])
+#     sl = np.maximum(np.maximum(sl,sl1) ,sl2) # 2% below the close price
+#     # insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
+#     #
+#     #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
+#     PlaceOrder("SELL", df.iloc[-1:], sl, s)
+#
+# if (buy_signals == "yes"):
+#     sl = calculate_stop_lossForBuy(df.iloc[-1:])
+#     sl1 = calculate_stop_lossForSell(df.iloc[-2:])
+#     sl2 = calculate_stop_lossForSell(df.iloc[-2:])
+#     sl = np.minimum(np.minimum(sl,sl1) ,sl2)
+#     # insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
+#     #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
+#     PlaceOrder("BUY", df.iloc[-1:], sl, s)
+
+# for idx, (signal_candle, signal_type) in enumerate(buy_signals):
+#     print(f"Signal {idx + 1} ({signal_type}):")
+#     print(signal_candle)
+#     print("\n")
+#     insert_scanned_data(datetime.now(), s['symbol'], "SELL", "BUY Signal", "CRYPTO",
+#                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
+#
+# # Output the Sell signals
+# print("Sell signals:")
+# for idx, (signal_candle, signal_type) in enumerate(sell_signals):
+#     print(f"Signal {idx + 1} ({signal_type}):")
+#     print(signal_candle)
+#     print("\n")
+#     insert_scanned_data(datetime.now(), s['symbol'], "SELL", "SELL Signal", "CRYPTO",
+#                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
+
+# current_cl_index = len(five_minute.Close) - 1
+# if five_minute['oi_change_last2_pc'].values[current_cl_index] > 2  :
+#     insert_scanned_data(datetime.datetime.now(), s['symbol'], "TBD", "OI Change "+ five_minute['oi_change_last2_pc'].values[current_cl_index], "CRYPTO",
+#                         VWAP['higher_band'].iloc[-1], VWAP['lower_band'].iloc[-1], VWAP['vwap'].iloc[-1])
+#
+# for idx, shooting_star in enumerate(sell_signals):
+#     print(f"Pattern {idx + 1}:")
+#     print(shooting_star)
+#     print("\n")
+
+
+# Build candle and last few chandle check
+# check if there is candle above avergae candle which is kind oflonely cpmared to 5 ema
+# check how does the price moves after that

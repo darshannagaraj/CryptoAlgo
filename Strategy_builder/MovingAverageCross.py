@@ -161,12 +161,14 @@ def find_symbols_close_to_vwap(df, threshold_lower=0.8, threshold_higher=1.2):
     lower_band = df['lower_band'].iloc[-1]
     higher_band = df['higher_band'].iloc[-1]
     return lower_band <= price <= higher_band
+
+
 def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_obj,drop_rows=0 ):
 
     atr_period = 10
     atr_multiplier = 3.0
     scanned_data = {}
-    five_minute = getminutedata(s['symbol'],client.KLINE_INTERVAL_5MINUTE,1, market_type,client)
+    five_minute = getminutedata(s['symbol'],client.KLINE_INTERVAL_15MINUTE,5, market_type,client)
     five_minute.drop(five_minute.tail(drop_rows).index,
             inplace=True)
     # hist_data = client.futures_open_interest_hist(symbol=s['symbol'], period=client.KLINE_INTERVAL_5MINUTE,
@@ -185,39 +187,28 @@ def find_movement_based_on_time_frame(s,client,market_type,Scanned_all,wrapper_o
     five_minute.reset_index(inplace=True)
     df = five_minute
     # Find Sell signals
-    sell_signals = find_sell_signals(df)
-    buy_signals = find_superbuy_signals(df)
 
-    vwapStatus = find_symbols_close_to_vwap(five_minute)
-    VWAP = calculate_vwap_bands(five_minute, num_std_dev=1)
+    buy_signals = find_buy_signals(df)
 
-    for idx, shooting_star in enumerate(sell_signals):
-        current_datetime = datetime.datetime.now()
-        print(current_datetime, s['symbol'])
-        print(f"Pattern {idx + 1}:")
-        print(shooting_star)
-        print("\n")
+    # vwapStatus = find_symbols_close_to_vwap(five_minute)
+    # VWAP = calculate_vwap_bands(five_minute, num_std_dev=1)
+    #
+    # # for idx, shooting_star in enumerate(sell_signals):
+    #     current_datetime = datetime.datetime.now()
+    #     print(current_datetime, s['symbol'])
+    #     print(f"Pattern {idx + 1}:")
+    #     print(shooting_star)
+    #     print("\n")
 
-    if (sell_signals == "yes"):
-        dt = client.get_all_tickers()
-        ab = find_dictionary_by_key(dt, 'symbol', s['symbol'])
-        sl = calculate_stop_lossForSell(df.iloc[-1:])
-        sl1 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl2 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl = np.maximum(np.maximum(sl,sl1) ,sl2) # 2% below the close price
-        # insert_scanned_data(datetime.datetime.now(), s['symbol'], "SELL", "SELL Signal bb", "CRYPTO",
-        #
-        #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
-        PlaceOrder("SELL", df.iloc[-1:], sl, s)
 
-    if (buy_signals == "yes"):
-        sl = calculate_stop_lossForBuy(df.iloc[-1:])
-        sl1 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl2 = calculate_stop_lossForSell(df.iloc[-2:])
-        sl = np.minimum(np.minimum(sl,sl1) ,sl2)
-        # insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
-        #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
-        PlaceOrder("BUY", df.iloc[-1:], sl, s)
+    # if (buy_signals == "yes"):
+    #     sl = calculate_stop_lossForBuy(df.iloc[-1:])
+    #     sl1 = calculate_stop_lossForSell(df.iloc[-2:])
+    #     sl2 = calculate_stop_lossForSell(df.iloc[-2:])
+    #     sl = np.minimum(np.minimum(sl,sl1) ,sl2)
+    #     # insert_scanned_data(datetime.datetime.now(), s['symbol'], "BUY", "BUY Signal bb", "CRYPTO",
+    #     #                     VWAP['higher_band'].iloc[-1],  sl[0], VWAP['vwap'].iloc[-1])
+    #     PlaceOrder("BUY", df.iloc[-1:], sl, s)
 
     # for idx, (signal_candle, signal_type) in enumerate(buy_signals):
     #     print(f"Signal {idx + 1} ({signal_type}):")
@@ -321,13 +312,14 @@ def is_volume_greater_than_average(candle, candles, average_period=40):
 
 def is_bollinger_difference_sufficient(bollinger_upper, bollinger_lower, threshold=0.023):
     return (bollinger_upper - bollinger_lower) >= bollinger_upper * threshold
+
 # Condition 3: 3 candles prior to crossover price was above the crossed Moving average
 def above_ma_prior(crossover, ma_column, df):
     mask = (df['Close'].shift(4) > df[ma_column].shift(4)) & (df['Close'].shift(3) > df[ma_column].shift(3)) & (df['Close'].shift(2) > df[ma_column].shift(2))
     return crossover & mask
 
 
-def find_superbuy_signals(df):
+def find_buy_signals(df):
     buy_signals = []
 
     # Calculate Bollinger Bands
@@ -416,31 +408,6 @@ def find_superbuy_signals(df):
     #
     # return buy_signals
 
-def find_buy_signals(candlestick_data):
-    buy_signals = []
-
-    # Calculate Bollinger Bands
-    candlestick_data['SMA'] = candlestick_data['Close'].rolling(window=20).mean()
-    candlestick_data['STD'] = candlestick_data['Close'].rolling(window=20).std()
-    candlestick_data['BollingerUpper'] = candlestick_data['SMA'] + 2 * candlestick_data['STD']
-    candlestick_data['BollingerLower'] = candlestick_data['SMA'] - 2 * candlestick_data['STD']
-
-    # Filter data for faster access
-    previous_candles = candlestick_data.iloc[-5:]
-
-    for idx, candle in candlestick_data.iterrows():
-        if  extreme_bullishCandle(candle) and\
-                is_volume_greater_than_previous(candle, previous_candles) and \
-                is_volume_greater_than_average(candle, candlestick_data) and \
-                is_inside_bollinger_upper(candle, candle['BollingerUpper'],candle['BollingerLower']) and \
-                is_bollinger_difference_sufficient(candle['BollingerUpper'], candle['BollingerLower']):
-                # candle['oi_change_last2_pc'] > 2:
-            if idx == len(candlestick_data) - 1 or  idx == len(candlestick_data) - 2:
-                return "yes"
-            buy_signals.append(candle)
-
-    return buy_signals
-
 
 def find_sell_signals(candlestick_data):
     sell_signals = []
@@ -494,6 +461,7 @@ def Scanner():
             symbol_list = (Wrapper_obj.get_all_symbols_binance(client))
             for s in symbol_list['symbols']:
                 try:
+                    # print(s['symbol'])
                     Future_scan =  find_movement_based_on_time_frame(s, client, "future", Scanned_all,Wrapper_obj)
                 except Exception as ex1:
                     print(s['symbol'])
